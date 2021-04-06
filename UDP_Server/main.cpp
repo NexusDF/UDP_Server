@@ -31,7 +31,7 @@ void main(int argc, char* argv[])
 	sockaddr_in receiver, sender;
 
 	receiver.sin_family = AF_INET;
-	receiver.sin_port = htons(54000);
+	receiver.sin_port = htons(2620);
 	receiver.sin_addr.S_un.S_addr = INADDR_ANY;
 
 	if (bind(out, (sockaddr*)&receiver, sizeof(receiver)) < 0)
@@ -41,17 +41,45 @@ void main(int argc, char* argv[])
 		return;
 	}
 
-	char buf[1024];
+	struct addrinfo* result = NULL;
+
+	SOCKET connections[100];
+
+	char buf[1];
 	int senderLength = sizeof(sender);
-	ZeroMemory(buf, 1024);
 	ZeroMemory(&sender, senderLength);
 
-	recvfrom(out, buf, 1024, 0, (sockaddr*)&sender, &senderLength);
-	sendto(out, buf, 1024, 0, (sockaddr*)&sender, senderLength);
+	recvfrom(out, (char*)buf, 1, 0, (sockaddr*)&sender, &senderLength);
+	if (buf[0] == 'r') {
+		sendto(out, (char*)buf, 1, 0, (sockaddr*)&sender, senderLength);
+	}
+	else {
+		sendto(out, (char*)buf, 1, 0, (sockaddr*)&sender, senderLength);
+		char ip[256];
+		inet_ntop(AF_INET, &sender.sin_addr, ip, 256);
+		cout << "FROM: " << ip;
+
+		SOCKET se = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+
+		if (bind(se, (sockaddr*)&receiver, sizeof(receiver)) == SOCKET_ERROR)
+		{
+			cout << "error bind";
+		}
+		
+		if (listen(se, SOMAXCONN) != 0) {
+			cout << "Error listen";
+		}
+
+		SOCKET newCon = accept(se, NULL, NULL);
+		char mes[20] = "hello pyatuh";
+		send(newCon, mes, 20, NULL);
+		recv(newCon, mes, 20, NULL);
+		cout << mes;
+		return;
+	}
 
 	char serverIp[256];
 	inet_ntop(AF_INET, &sender.sin_addr, serverIp, 256);
-	cout << buf << " from " << serverIp << endl;
 
 	// Close the socket
 	closesocket(out);
